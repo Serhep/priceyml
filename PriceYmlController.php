@@ -37,7 +37,7 @@ class PriceYmlControllerCore extends FrontController
         
         $cats = Category::getCategories((int)$this->context->language->id, true, false) ;
         
-        $fp = fopen($_SERVER['DOCUMENT_ROOT'].'/files/priceyml.yml', 'w');
+        $fp = fopen($_SERVER['DOCUMENT_ROOT'].'/files/price.yml', 'w');
             $text = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
             <yml_catalog date=\"".date('Y-m-d')."T".date('H:i:s')."\">
             <shop>
@@ -51,7 +51,11 @@ class PriceYmlControllerCore extends FrontController
                 ";
                 fwrite($fp, $text);
                 foreach($cats as $data){
-                if($data['id_category']>1){    
+                if($data['id_category']>1){ 
+                    if($data['id_category'] == 2)
+                $text = "   <category id=\"".$data['id_category']."\">".$data['name']."</category>
+                ";
+                    else   
                 $text = "   <category id=\"".$data['id_category']."\" parentId=\"".$data['id_parent']."\">".$data['name']."</category>
                 ";
                 fwrite($fp, $text);
@@ -68,74 +72,52 @@ class PriceYmlControllerCore extends FrontController
                 ";
 
             fwrite($fp, $text); 
-            
-            fclose($fp);
 
+
+        $products_partial = Product::getProducts((int)$this->context->language->id, 0, 0, 'name', 'asc');
+        $products = Product::getProductsProperties((int)$this->context->language->id, $products_partial);
 /*
-        $products_partial = Product::getProducts(3, 0, 0, 'name', 'asc');
-        $products = Product::getProductsProperties(3, $products_partial);
-
+        $item = (new Product($products[0]['id_product']))->getAttributeCombinations();
+*/
         $link = new Link;
 
     foreach ($products as $key => $product) {          
         $cover = Product::getCover($product['id_product']);
-        $products[$key]["id_image"] = 'http://'.$link->getImageLink($products[$key]['link_rewrite'], $cover["id_image"], 'home_default');
+        $products[$key]["id_image"] = 'https://'.$link->getImageLink($products[$key]['link_rewrite'], $cover["id_image"], 'home_default');
     }
-    print_r($products); 
-*/
-   
-
-        /*if ($price) {
-            $fp = fopen($_SERVER['DOCUMENT_ROOT'].'/files/priceyml.yml', 'w');
-            $text = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
-            <yml_catalog date=\"".date('Y-m-d')."T".date('H:i:s')."\">
-            <shop>
-                <name>БИЗНЕСMEN</name>
-                <company>БИЗНЕСMEN</company>
-                <url>https://shop.bizmn.ru</url>
-                <currencies>
-                    <currency id=\"RUR\" rate=\"1\"/>
-                </currencies>
-                <categories>
-                    <category id=\"92\">Верхняя одежда</category>
-                    <category id=\"31862\" parentId=\"92\">Пальто</category>
-                </categories>
-                <delivery-options>
-                    <option cost=\"0\" days=\"2-4\"/>
-                </delivery-options>
-                <pickup-options>
-                    <option cost=\"0\" days=\"2-4\"/>
-                </pickup-options>
-            <offers>
-                ";
-            fwrite($fp, $text);
-            foreach ($price as $data) {
-                $text = "<offer id=\"".$data['CODE']."\">
-                        <name>".$data['NAME']."</name>
-                        <param name=\"Атрибуты\">".$data['ATTRIBUTE']."</param>
-                        <url>https://shop.bizmn.ru/palto/1652-3491-palto-311.html</url>
-                        <price>26500</price>
-                        <oldprice>28500</oldprice>
-                        <currencyId>RUR</currencyId>
-                        <categoryId>31862</categoryId>
-                        <picture>https://shop.bizmn.ru/2256/palto-311.jpg</picture>
+            foreach ($products as $data) {
+                if($data['active']){
+                $text = "<offer id=\"".$data['id_product']."\">
+                        <name>".$data['name']."</name>
+                        <url>".$data['link']."</url>
+                        <price>".$data['price']."</price>
+                        "
+                        .(($data['price']==$data['price_without_reduction'])?"":"<oldprice>".$data['price_without_reduction']."</oldprice>
+                        ").
+                        "<currencyId>RUR</currencyId>
+                        <categoryId>".$data['id_category_default']."</categoryId>
+                        <picture>".$data['id_image']."</picture>
                         <delivery>true</delivery>
                         <pickup>true</pickup>
+                        <delivery-options>
+                            <option cost=\"0\" days=\"2-4\"/>
+                        </delivery-options>
+                        <pickup-options>
+                            <option cost=\"0\" days=\"2-4\"/>                        
+                        </pickup-options>
                         <store>true</store>
-                        <description>100%-шерсть</description>
-                        <available>true</available>
+                        <description><![CDATA[".$data['description_short']."]]></description>
                     </offer>
                 ";
                 fwrite($fp, $text);
+                }
             }
             $text = "</offers>
         </shop>
 </yml_catalog>";
 
-            fwrite($fp, $text); 
-            
+            fwrite($fp, $text);             
             fclose($fp);
-        }*/
 
     }
 
